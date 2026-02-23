@@ -1,0 +1,45 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg-primary: #0f0f0f;
+    --bg-secondary: #111111;
+    --bg-tertiary: #121212;
+    --bg-card: #2c2c2e;
+    --text-primary: #ffffff;
+    --text-secondary: #a0a0a0;
+    --border: #2c2c2e;
+    --accent: #ffffff;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    user-select: none;
+}
+
+#root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ==================================================
+   CUSTOM SCROLLBAR - THIN GREY & BLACK
+   Works in Chrome, Edge, Safari, Firefox
+================================================== */
+
+/* For Chrome, Edge, Safari (WebKit browsers) */
+::-webkit-scrollbar {
+    width: 0px;        
+    height: 0px;          
+}
