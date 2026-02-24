@@ -28,6 +28,7 @@ Production Ready Features:
 
 import os
 import sys
+import requests
 from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import List, Optional
@@ -38,6 +39,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from web_search import search_wikipedia, search_duckduckgo
 
 # Ensure backend modules import ho sakein
 backend_dir = Path(__file__).parent
@@ -224,6 +226,24 @@ async def root():
         "docs": "/docs",
         "health": "/health"
     }
+
+
+@app.get("/api/web-search", tags=["Search"])
+async def web_search(q: str = Query(..., min_length=1)):
+    results = {
+        'wikipedia': None,
+        'web_results': []
+    }
+    
+    wiki = search_wikipedia(q)
+    if wiki:
+        results['wikipedia'] = wiki
+    
+    web = search_duckduckgo(q)
+    if web:
+        results['web_results'] = web
+    
+    return results
 
 
 @app.get("/health", response_model=HealthResponse, tags=["System"])
@@ -473,30 +493,60 @@ def _background_indexing(path: str, recursive: bool):
 
 
 @app.get("/api/suggest", tags=["Search"])
-async def get_suggestions(
-    q: str = Query(..., min_length=2, description="Partial query for suggestions")
-):
-    """
-    Autocomplete suggestions return karta hai.
-    
-    Args:
-        q: Partial query string (min 2 chars)
-        
-    Returns:
-        List of suggested terms
-    """
-    if not app_state.is_ready or not q:
-        return {"suggestions": []}
-    
-    # Simple prefix matching from index
+async def get_suggestions(q: str = Query(..., min_length=1)):
     suggestions = []
-    query_lower = q.lower()
     
-    for term in app_state.search_engine.index.index.keys():
-        if term.startswith(query_lower) and len(suggestions) < 5:
-            suggestions.append(term)
+    # 1. Local index se - sahi tarike se access karo
+    try:
+        if app_state.is_ready and app_state.search_engine:
+            local_terms = [
+                term for term in app_state.search_engine.index.index.keys() 
+                if term.startswith(q.lower())
+            ][:2]
+            suggestions.extend(local_terms)
+    except Exception as e:
+        print(f"Local suggest error: {e}")
     
-    return {"suggestions": suggestions}
+    # 2. DuckDuckGo Suggest API
+    try:
+        duck_url = f"https://duckduckgo.com/ac/?q={q}&type=list"
+        response = requests.get(
+            duck_url, 
+            timeout=3, 
+            headers={'User-Agent': 'Mozilla/5.0'}
+        )
+        if response.status_code == 200:
+            data = response.json()
+            if len(data) > 1 and isinstance(data[1], list):
+                duck_suggestions = data[1][:4]
+                suggestions.extend(duck_suggestions)
+    except Exception as e:
+        print(f"DuckDuckGo suggest error: {e}")
+    
+    # 3. Wikipedia search suggestions
+    try:
+        wiki_url = f"https://en.wikipedia.org/w/api.php?action=opensearch&search={q}&limit=3&format=json"
+        response = requests.get(wiki_url, timeout=3)
+        if response.status_code == 200:
+            data = response.json()
+            if len(data) > 1 and isinstance(data[1], list):
+                wiki_suggestions = data[1][:3]
+                suggestions.extend(wiki_suggestions)
+    except Exception as e:
+        print(f"Wikipedia suggest error: {e}")
+    
+    # Remove duplicates
+    seen = set()
+    unique = []
+    for s in suggestions:
+        lower_s = s.lower()
+        if lower_s not in seen:
+            seen.add(lower_s)
+            unique.append(s)
+        if len(unique) >= 6:
+            break
+    
+    return {"suggestions": unique}
 
 
 # =============================================================================

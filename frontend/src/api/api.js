@@ -77,3 +77,19 @@ export const getHealth = async () => {
         return null;
     }
 };
+
+// Web search (Wikipedia + DuckDuckGo)
+export const searchWeb = async (query) => {
+    try {
+        const response = await fetch(
+            `${API_URL}/api/web-search?q=${encodeURIComponent(query)}`
+        );
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Web search error:', error);
+        return { wikipedia: null, web_results: [] };
+    }
+};

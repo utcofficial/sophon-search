@@ -65,3 +65,85 @@
     0%, 100% { opacity: 0.4; }
     50% { opacity: 0.8; }
 }
+
+.wikipediaBox {
+    background-color: #1a1a1a;
+    border: 1px solid #2c2c2e;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.wikipediaBox h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 12px;
+}
+
+.wikipediaBox p {
+    font-size: 14px;
+    color: #a0a0a0;
+    line-height: 1.6;
+    margin-bottom: 16px;
+}
+
+.wikipediaBox a {
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.wikipediaBox a:hover {
+    text-decoration: underline;
+}
+
+.section {
+    margin-bottom: 32px;
+}
+
+.sectionTitle {
+    font-size: 14px;
+    font-weight: 600;
+    color: #a0a0a0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #2c2c2e;
+}
+
+.webResult {
+    background-color: #111111;
+    border: 1px solid #2c2c2e;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+}
+
+.webTitle {
+    font-size: 16px;
+    font-weight: 500;
+    color: #ffffff;
+    text-decoration: none;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.webTitle:hover {
+    text-decoration: underline;
+}
+
+.webSnippet {
+    font-size: 14px;
+    color: #a0a0a0;
+    line-height: 1.5;
+    margin-bottom: 8px;
+}
+
+.webUrl {
+    font-size: 12px;
+    color: #a0a0a0;
+    font-family: monospace;
+}

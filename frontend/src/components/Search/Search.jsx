@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { searchDocuments, getSuggestions, getSearchCount } from '../../api/api'
+import { getSuggestions } from '../../api/api'  // searchDocuments hata diya kyunki App.jsx mein hai
 import styles from './Search.module.css'
 
-function Search({ onResults, onLoading, onError, onExpectedCount }) {
+// Naye props: onSearch (performSearch ka reference), initialQuery (URL se)
+function Search({ onSearch, onExpectedCount, initialQuery }) {
     const [searchParams, setSearchParams] = useSearchParams()
-    const [query, setQuery] = useState(searchParams.get('q') || '')
+    // initialQuery prop se set karo, ya URL se lo
+    const [query, setQuery] = useState(initialQuery || searchParams.get('q') || '')
     const [suggestions, setSuggestions] = useState([])
     const [showSuggestions, setShowSuggestions] = useState(false)
     const [activeSuggestion, setActiveSuggestion] = useState(-1)
@@ -13,41 +15,16 @@ function Search({ onResults, onLoading, onError, onExpectedCount }) {
     const suggestionsRef = useRef(null)
     const justSearched = useRef(false)
 
+    // URL query change hone pe update karo
     useEffect(() => {
-        const urlQuery = searchParams.get('q')
-        if (urlQuery) {
-            setQuery(urlQuery)
-            justSearched.current = true
-            performSearch(urlQuery, false)
+        if (initialQuery !== undefined) {
+            setQuery(initialQuery)
         }
-    }, [])
+    }, [initialQuery])
 
-    const performSearch = async (searchQuery, showSuggestAfter = false) => {
-        if (!searchQuery.trim()) return
-
-        setShowSuggestions(false)
-        justSearched.current = true
-        onLoading()
-
-        try {
-            // Pehle count le aao (fast)
-            const count = await getSearchCount(searchQuery)
-            onExpectedCount(count > 0 ? count : 1)
-
-            // Phir 2-4 sec delay
-            const delay = Math.floor(Math.random() * 2000) + 2000
-            await new Promise(resolve => setTimeout(resolve, delay))
-
-            // Ab actual results
-            const data = await searchDocuments(searchQuery)
-            onResults(data)
-            setSearchParams({ q: searchQuery })
-        } catch (err) {
-            onError(err)
-        }
-    }
-
+    // Suggestions fetch karo
     useEffect(() => {
+        // Agar abhi search hua hai toh mat fetch karo
         if (justSearched.current) {
             justSearched.current = false
             return
@@ -68,19 +45,32 @@ function Search({ onResults, onLoading, onError, onExpectedCount }) {
         return () => clearTimeout(timeoutId)
     }, [query])
 
-    const handleSubmit = async (e) => {
+    // Form submit - App.jsx ke performSearch ko call karo
+    const handleSubmit = (e) => {
         e.preventDefault()
         if (!query.trim()) return
-        await performSearch(query)
+        
+        // Suggestions hide karo
+        setShowSuggestions(false)
+        setSuggestions([])
+        justSearched.current = true
+        
+        // Parent ko bolo search kare
+        onSearch(query)
     }
 
-    const handleSuggestionClick = async (suggestion) => {
+    // Suggestion click - direct search
+    const handleSuggestionClick = (suggestion) => {
         setQuery(suggestion)
         setShowSuggestions(false)
         setSuggestions([])
-        await performSearch(suggestion)
+        justSearched.current = true
+        
+        // Parent ko bolo search kare
+        onSearch(suggestion)
     }
 
+    // Keyboard navigation
     const handleKeyDown = (e) => {
         if (!showSuggestions) return
 
@@ -107,6 +97,7 @@ function Search({ onResults, onLoading, onError, onExpectedCount }) {
         }
     }
 
+    // Click outside pe suggestions band karo
     useEffect(() => {
         const handleClickOutside = (e) => {
             if (suggestionsRef.current && !suggestionsRef.current.contains(e.target)) {

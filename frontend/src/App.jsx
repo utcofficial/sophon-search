@@ -3,11 +3,13 @@ import { useSearchParams } from 'react-router-dom'
 import Search from './components/Search/Search'
 import Results from './components/Results/Results'
 import Footer from './components/Footer/Footer'
+import { searchDocuments, searchWeb } from './api/api'
 import styles from './App.module.css'
 
 function App() {
     const [searchParams, setSearchParams] = useSearchParams()
-    const [results, setResults] = useState([])
+    const [localResults, setLocalResults] = useState([])
+    const [webResults, setWebResults] = useState({ wikipedia: null, web_results: [] })
     const [totalResults, setTotalResults] = useState(0)
     const [searchTime, setSearchTime] = useState(0)
     const [hasSearched, setHasSearched] = useState(false)
@@ -15,25 +17,52 @@ function App() {
     const [error, setError] = useState(null)
     const [expectedCount, setExpectedCount] = useState(3)
 
-    const handleSearchResults = (data) => {
-        setResults(data.results || [])
-        setTotalResults(data.total_results || 0)
-        setSearchTime(data.search_time_ms || 0)
-        setHasSearched(true)
-        setIsLoading(false)
+    // URL se query read karke auto search
+    // useEffect(() => {
+    //     const urlQuery = searchParams.get('q')
+    //     if (urlQuery) {
+    //         performSearch(urlQuery)
+    //     }
+    // }, [])
+
+    const performSearch = async (query) => {
+        if (!query.trim()) return
+        
+        setIsLoading(true)
         setError(null)
+        setLocalResults([])
+        setWebResults({ wikipedia: null, web_results: [] })
+
+        try {
+            // Dono search parallel mein
+            const [localData, webData] = await Promise.all([
+                searchDocuments(query),
+                searchWeb(query)
+            ])
+
+            setLocalResults(localData.results || [])
+            setWebResults(webData)
+            setTotalResults((localData.total_results || 0) + (webData.web_results?.length || 0))
+            setSearchTime(localData.search_time_ms || 0)
+            setHasSearched(true)
+            setSearchParams({ q: query })
+        } catch (err) {
+            setError(err.message || 'Search failed')
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    const handleSearchResults = (data) => {
+        // Ab use nahi hoga, direct performSearch call hota hai
     }
 
     const handleLoading = () => {
-        setIsLoading(true)
-        setError(null)
-        setResults([])
+        // Ab use nahi hoga
     }
 
     const handleError = (err) => {
-        setError(err.message || 'Search failed')
-        setIsLoading(false)
-        setResults([])
+        // Ab use nahi hoga
     }
 
     const handleExpectedCount = (count) => {
@@ -42,6 +71,11 @@ function App() {
 
     const handleLogoClick = () => {
         window.location.href = '/'
+    }
+
+    // Search component ko performSearch pass karo
+    const handleSearch = (query) => {
+        performSearch(query)
     }
 
     return (
@@ -54,10 +88,9 @@ function App() {
             
             <main className={styles.main}>
                 <Search 
-                    onResults={handleSearchResults}
-                    onLoading={handleLoading}
-                    onError={handleError}
+                    onSearch={handleSearch}
                     onExpectedCount={handleExpectedCount}
+                    initialQuery={searchParams.get('q') || ''}
                 />
                 
                 {!hasSearched && !isLoading && (
@@ -72,7 +105,8 @@ function App() {
                 
                 {(hasSearched || isLoading) && !error && (
                     <Results 
-                        results={results}
+                        localResults={localResults}
+                        webResults={webResults}
                         totalResults={totalResults}
                         searchTime={searchTime}
                         isLoading={isLoading}
